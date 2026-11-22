@@ -1,13 +1,13 @@
 #!/bin/bash
 # <xbar.title>Claude Usage</xbar.title>
-# <xbar.desc>Uso do Claude Code (sessão 5h e semana) + CPU/RAM</xbar.desc>
+# <xbar.desc>Claude Code usage (5h session and week) + CPU/RAM</xbar.desc>
 # <swiftbar.hideAbout>true</swiftbar.hideAbout>
 # <swiftbar.hideRunInTerminal>true</swiftbar.hideRunInTerminal>
 # <swiftbar.hideLastUpdated>false</swiftbar.hideLastUpdated>
 
 # ---------- Config ----------
-CLAUDE_INTERVAL=300          # segundos entre consultas ao Claude (5 min)
-CLAUDE_TIMEOUT=90            # segundos máximos para o comando claude responder
+CLAUDE_INTERVAL=300          # seconds between Claude queries (5 min)
+CLAUDE_TIMEOUT=90            # max seconds for the claude command to respond
 CACHE_DIR="$HOME/Library/Caches/claude-usage-swiftbar"
 CACHE="$CACHE_DIR/usage.txt"
 LOCK="$CACHE_DIR/lock"
@@ -17,12 +17,12 @@ mkdir -p "$CACHE_DIR"
 
 CLAUDE_BIN="$(command -v claude 2>/dev/null)"
 
-# ---------- Atualiza cache do Claude em segundo plano ----------
+# ---------- Refresh Claude cache in the background ----------
 now=$(date +%s)
 mtime=0
 [ -f "$CACHE" ] && mtime=$(stat -f %m "$CACHE" 2>/dev/null || echo 0)
 
-# remove lock travado (mais velho que o timeout)
+# remove stale lock (older than the timeout)
 if [ -d "$LOCK" ]; then
   lt=$(stat -f %m "$LOCK" 2>/dev/null || echo 0)
   [ $((now - lt)) -gt $((CLAUDE_TIMEOUT + 30)) ] && rmdir "$LOCK" 2>/dev/null
@@ -39,7 +39,7 @@ if [ -n "$CLAUDE_BIN" ] && [ $((now - mtime)) -ge $CLAUDE_INTERVAL ] && mkdir "$
   ) > /dev/null 2>&1 &
 fi
 
-# ---------- Lê e interpreta o cache ----------
+# ---------- Read and parse the cache ----------
 S_PCT=""; S_RST=""; W_PCT=""; W_RST=""; RAW=""
 if [ -f "$CACHE" ]; then
   RAW="$(LC_ALL=C sed -e $'s/\x1b\\[[0-9;?]*[a-zA-Z]//g' -e $'s/\r//g' "$CACHE")"
@@ -85,7 +85,7 @@ bar() {
   echo "$out"
 }
 
-# ---------- Sistema ----------
+# ---------- System ----------
 NCPU=$(sysctl -n hw.ncpu)
 CPU=$(ps -A -o %cpu= | awk -v n="$NCPU" '{s+=$1} END {v=s/n; if (v>100) v=100; printf "%.0f", v}')
 MEM_TOTAL=$(sysctl -n hw.memsize)
@@ -100,13 +100,13 @@ MEM_GB=$(echo "$MEM_USED" | cut -d' ' -f1)
 MEM_TGB=$(echo "$MEM_USED" | cut -d' ' -f2)
 MEM_PCT=$(echo "$MEM_USED" | cut -d' ' -f3)
 
-# ---------- Barra de menus ----------
+# ---------- Menu bar ----------
 if [ -n "$S_PCT" ] || [ -n "$W_PCT" ]; then
   max=${S_PCT%%.*}; wv=${W_PCT%%.*}
   [ -z "$max" ] && max=0; [ -n "$wv" ] && [ "$wv" -gt "$max" ] && max=$wv
   echo "✳︎ ${S_PCT:-–}% · ${W_PCT:-–}% | color=$(color_for "$max") font=Menlo size=12"
 elif [ -z "$CLAUDE_BIN" ]; then
-  echo "✳︎ sem claude | color=#8E8E93"
+  echo "✳︎ no claude | color=#8E8E93"
 elif [ ! -f "$CACHE" ]; then
   echo "✳︎ … | color=#8E8E93"
 else
@@ -115,23 +115,23 @@ fi
 
 echo "---"
 
-# ---------- Menu ----------
+# ---------- Dropdown ----------
 echo "Claude Code | size=13"
 if [ -n "$S_PCT" ]; then
-  echo "Sessão 5h   $(bar "$S_PCT")  ${S_PCT}% | font=Menlo size=12 color=$(color_for "$S_PCT")"
+  echo "Session 5h  $(bar "$S_PCT")  ${S_PCT}% | font=Menlo size=12 color=$(color_for "$S_PCT")"
   [ -n "$S_RST" ] && echo "   reset: $S_RST | font=Menlo size=11 color=#8E8E93"
 fi
 if [ -n "$W_PCT" ]; then
-  echo "Semana      $(bar "$W_PCT")  ${W_PCT}% | font=Menlo size=12 color=$(color_for "$W_PCT")"
+  echo "Week        $(bar "$W_PCT")  ${W_PCT}% | font=Menlo size=12 color=$(color_for "$W_PCT")"
   [ -n "$W_RST" ] && echo "   reset: $W_RST | font=Menlo size=11 color=#8E8E93"
 fi
 if [ -z "$S_PCT" ] && [ -z "$W_PCT" ]; then
   if [ -z "$CLAUDE_BIN" ]; then
-    echo "Comando 'claude' não encontrado no PATH | color=#FF9F0A"
+    echo "'claude' command not found in PATH | color=#FF9F0A"
   elif [ ! -f "$CACHE" ]; then
-    echo "Consultando o Claude, aguarde… | color=#8E8E93"
+    echo "Querying Claude, please wait… | color=#8E8E93"
   else
-    echo "Não consegui ler a saída. Texto bruto: | color=#FF9F0A"
+    echo "Couldn't parse the output. Raw text: | color=#FF9F0A"
     printf '%s\n' "$RAW" | head -25 | while IFS= read -r l; do
       l=$(printf '%s' "$l" | tr '|' '/')
       [ -n "$l" ] && echo "--$l | font=Menlo size=11"
@@ -140,19 +140,19 @@ if [ -z "$S_PCT" ] && [ -z "$W_PCT" ]; then
 fi
 if [ -f "$CACHE" ]; then
   age=$(( ( $(date +%s) - $(stat -f %m "$CACHE") ) / 60 ))
-  echo "atualizado há ${age} min | size=11 color=#8E8E93"
+  echo "updated ${age} min ago | size=11 color=#8E8E93"
 fi
 
 echo "---"
-echo "Sistema | size=13"
+echo "System | size=13"
 echo "CPU         $(bar "$CPU")  ${CPU}% | font=Menlo size=12 color=$(color_for "$CPU")"
 echo "RAM         $(bar "$MEM_PCT")  ${MEM_GB}/${MEM_TGB} GB | font=Menlo size=12 color=$(color_for "$MEM_PCT")"
-echo "Top processos (CPU) | size=11 color=#8E8E93"
+echo "Top processes (CPU) | size=11 color=#8E8E93"
 ps -Arceo pcpu=,rss=,comm= | head -5 | awk '{
   cpu=$1; mem=$2/1024; $1=""; $2=""; sub(/^  /,"");
   name=substr($0,1,22); gsub(/\|/,"/",name);
   printf "%-22s %5.1f%%  %5.0f MB | font=Menlo size=11\n", name, cpu, mem }'
 
 echo "---"
-echo "Atualizar Claude agora | bash='$0' param1=refresh terminal=false refresh=true"
-echo "Monitor de Atividade | bash=/usr/bin/open param1=-a param2='Activity Monitor' terminal=false"
+echo "Refresh Claude now | bash='$0' param1=refresh terminal=false refresh=true"
+echo "Activity Monitor | bash=/usr/bin/open param1=-a param2='Activity Monitor' terminal=false"
