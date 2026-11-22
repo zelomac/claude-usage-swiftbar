@@ -37,7 +37,7 @@ To start it with your Mac, add SwiftBar in **System Settings › General › Log
 
 - Runs `claude -p "/usage"` in the background every 5 minutes and caches the result in `~/Library/Caches/claude-usage-swiftbar/`.
 - System stats refresh every 10 seconds, so the menu bar never blocks.
-- Use **Atualizar Claude agora** in the menu to force a refresh.
+- Use **Refresh Claude now** in the menu to force a refresh.
 - If the output can't be parsed, the menu shows the raw text so you can see what changed.
 
 ## Configuration
