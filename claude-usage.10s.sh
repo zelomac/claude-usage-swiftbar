@@ -74,6 +74,32 @@ color_for() {
   else echo "#30D158"; fi
 }
 
+# Convert "Nov 22 at 9:10pm" into "22 Nov at 21:10 (in 2h 44m)"
+fmt_reset() {
+  perl -MTime::Local -e '
+    my $s = shift; my %m = (jan=>0,feb=>1,mar=>2,apr=>3,may=>4,jun=>5,jul=>6,aug=>7,sep=>8,oct=>9,nov=>10,dec=>11);
+    my @M = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+    my $now = time; my @t = localtime($now);
+    if ($s =~ /(?:([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+)?(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m/i) {
+      my ($mo, $d, $h, $mi, $ap) = ($1, $2, $3, $4 // 0, lc $5);
+      $h = $h % 12; $h += 12 if $ap eq "p";
+      my ($mon, $day, $yr) = (defined $mo ? $m{lc $mo} : $t[4], $d // $t[3], $t[5] + 1900);
+      exit print $s unless defined $mon;
+      my $ts = timelocal(0, $mi, $h, $day, $mon, $yr);
+      if (defined $mo) { $ts = timelocal(0, $mi, $h, $day, $mon, $yr + 1) if $ts < $now - 43200 }
+      else { $ts += 86400 if $ts < $now }
+      my @r = localtime($ts); my $diff = $ts - $now;
+      my $left;
+      if ($diff <= 0) { $left = "now" }
+      else {
+        my ($dd, $hh, $mm) = (int($diff / 86400), int(($diff % 86400) / 3600), int(($diff % 3600) / 60));
+        $left = $dd ? "in ${dd}d ${hh}h" : $hh ? "in ${hh}h ${mm}m" : "in ${mm}m";
+      }
+      printf "%d %s at %02d:%02d (%s)", $r[3], $M[$r[4]], $r[2], $r[1], $left;
+    } else { print $s }
+  ' "$1"
+}
+
 bar() {
   p=${1%%.*}; [ -z "$p" ] && p=0
   [ "$p" -gt 100 ] && p=100
@@ -119,11 +145,11 @@ echo "---"
 echo "Claude Code | size=13"
 if [ -n "$S_PCT" ]; then
   echo "Session 5h  $(bar "$S_PCT")  ${S_PCT}% | font=Menlo size=12 color=$(color_for "$S_PCT")"
-  [ -n "$S_RST" ] && echo "   reset: $S_RST | font=Menlo size=11 color=#8E8E93"
+  [ -n "$S_RST" ] && echo "   Reset: $(fmt_reset "$S_RST") | font=Menlo size=11 color=#8E8E93"
 fi
 if [ -n "$W_PCT" ]; then
   echo "Week        $(bar "$W_PCT")  ${W_PCT}% | font=Menlo size=12 color=$(color_for "$W_PCT")"
-  [ -n "$W_RST" ] && echo "   reset: $W_RST | font=Menlo size=11 color=#8E8E93"
+  [ -n "$W_RST" ] && echo "   Reset: $(fmt_reset "$W_RST") | font=Menlo size=11 color=#8E8E93"
 fi
 if [ -z "$S_PCT" ] && [ -z "$W_PCT" ]; then
   if [ -z "$CLAUDE_BIN" ]; then
