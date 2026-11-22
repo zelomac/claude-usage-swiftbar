@@ -51,7 +51,7 @@ Runs locally. It sends nothing anywhere except what the `claude` CLI itself does
 
 ## Credits
 
-Inspired by [widget-claude-status](https://github.com/MarleySMaia/widget-claude-status) by MarleySMaia, a floating usage widget for Windows.
+WYSIWYG by Zelomac.
 
 ## License
 
